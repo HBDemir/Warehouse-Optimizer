@@ -1,0 +1,1414 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>3D Depo Optimizatörü</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=Syne:wght@400;600;800&display=swap');
+
+  :root {
+    --bg: #0a0c10;
+    --panel: #111318;
+    --border: #1e2229;
+    --accent: #00e5a0;
+    --accent2: #0099ff;
+    --warn: #ff6b35;
+    --text: #e8eaf0;
+    --muted: #4a5060;
+    --grid: #161a20;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'Syne', sans-serif;
+    height: 100vh;
+    display: flex;
+    overflow: hidden;
+  }
+
+  /* LEFT PANEL */
+  #sidebar {
+    width: 340px;
+    min-width: 340px;
+    background: var(--panel);
+    border-right: 1px solid var(--border);
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+  }
+
+  #sidebar-header {
+    padding: 20px 24px 16px;
+    border-bottom: 1px solid var(--border);
+    background: linear-gradient(135deg, #0d1117 0%, #111318 100%);
+  }
+
+  #sidebar-header h1 {
+    font-size: 18px;
+    font-weight: 800;
+    letter-spacing: -0.5px;
+    color: var(--accent);
+    font-family: 'Space Mono', monospace;
+  }
+
+  #sidebar-header p {
+    font-size: 11px;
+    color: var(--muted);
+    margin-top: 4px;
+    letter-spacing: 0.5px;
+  }
+
+  #sidebar-body {
+    flex: 1;
+    overflow-y: auto;
+    padding: 16px;
+    scrollbar-width: thin;
+    scrollbar-color: var(--border) transparent;
+  }
+
+  .section-label {
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 2px;
+    color: var(--muted);
+    text-transform: uppercase;
+    margin-bottom: 10px;
+    margin-top: 6px;
+  }
+
+  .input-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr;
+    gap: 6px;
+    margin-bottom: 8px;
+  }
+
+  .input-group {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+  }
+
+  .input-group label {
+    font-size: 9px;
+    color: var(--muted);
+    font-family: 'Space Mono', monospace;
+    letter-spacing: 1px;
+  }
+
+  input[type="number"], input[type="text"], select {
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    color: var(--text);
+    font-family: 'Space Mono', monospace;
+    font-size: 12px;
+    padding: 7px 10px;
+    width: 100%;
+    transition: border-color 0.2s;
+    outline: none;
+  }
+
+  input:focus, select:focus {
+    border-color: var(--accent);
+  }
+
+  .full-row {
+    grid-column: 1 / -1;
+  }
+
+  .btn {
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+    font-family: 'Space Mono', monospace;
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 1px;
+    padding: 9px 16px;
+    transition: all 0.2s;
+    text-transform: uppercase;
+  }
+
+  .btn-primary {
+    background: var(--accent);
+    color: #000;
+    width: 100%;
+    margin-top: 8px;
+  }
+
+  .btn-primary:hover { background: #00ffb3; transform: translateY(-1px); }
+
+  .btn-secondary {
+    background: transparent;
+    border: 1px solid var(--border);
+    color: var(--muted);
+    width: 100%;
+    margin-top: 6px;
+  }
+
+  .btn-secondary:hover { border-color: var(--accent2); color: var(--accent2); }
+
+  .btn-danger {
+    background: transparent;
+    border: 1px solid #ff4444;
+    color: #ff4444;
+    padding: 4px 8px;
+    font-size: 9px;
+    border-radius: 4px;
+  }
+  .btn-danger:hover { background: #ff4444; color: #000; }
+
+  .btn-run {
+    background: var(--accent2);
+    color: #fff;
+    width: 100%;
+    margin-top: 8px;
+    font-size: 12px;
+    padding: 12px;
+  }
+  .btn-run:hover { background: #33aaff; transform: translateY(-1px); box-shadow: 0 4px 20px rgba(0,153,255,0.3); }
+
+  .divider {
+    height: 1px;
+    background: var(--border);
+    margin: 14px 0;
+  }
+
+  /* Package list */
+  #pkg-list {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    max-height: 220px;
+    overflow-y: auto;
+    scrollbar-width: thin;
+    scrollbar-color: var(--border) transparent;
+  }
+
+  .pkg-item {
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 8px 10px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    font-size: 11px;
+    font-family: 'Space Mono', monospace;
+    transition: border-color 0.2s;
+  }
+
+  .pkg-item:hover { border-color: var(--accent); }
+
+  .pkg-dot {
+    width: 10px;
+    height: 10px;
+    border-radius: 2px;
+    margin-right: 8px;
+    flex-shrink: 0;
+  }
+
+  .pkg-info { flex: 1; }
+  .pkg-id { color: var(--accent); font-size: 10px; }
+  .pkg-dims { color: var(--muted); font-size: 10px; margin-top: 1px; }
+
+  /* Stats */
+  #stats-panel {
+    padding: 12px 16px;
+    border-top: 1px solid var(--border);
+    background: var(--grid);
+  }
+
+  .stat-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 4px 0;
+    font-size: 11px;
+    font-family: 'Space Mono', monospace;
+  }
+
+  .stat-label { color: var(--muted); }
+  .stat-val { color: var(--accent); font-weight: 700; }
+  .stat-val.warn { color: var(--warn); }
+  .stat-val.ok { color: var(--accent); }
+
+  /* Progress bar */
+  .fill-bar-bg {
+    height: 4px;
+    background: var(--border);
+    border-radius: 2px;
+    margin-top: 6px;
+    overflow: hidden;
+  }
+  .fill-bar {
+    height: 100%;
+    border-radius: 2px;
+    background: linear-gradient(90deg, var(--accent2), var(--accent));
+    transition: width 0.5s ease;
+  }
+
+  /* MAIN VIEW */
+  #main {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+  }
+
+  #toolbar {
+    padding: 10px 20px;
+    border-bottom: 1px solid var(--border);
+    background: var(--panel);
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    font-size: 11px;
+    font-family: 'Space Mono', monospace;
+  }
+
+  .toolbar-chip {
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    padding: 4px 10px;
+    color: var(--muted);
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+  .toolbar-chip:hover, .toolbar-chip.active {
+    border-color: var(--accent);
+    color: var(--accent);
+  }
+
+  #toolbar-msg {
+    margin-left: auto;
+    color: var(--muted);
+    font-size: 10px;
+  }
+
+  #canvas-container {
+    flex: 1;
+    position: relative;
+    overflow: hidden;
+  }
+
+  #three-canvas {
+    display: block;
+    width: 100%;
+    height: 100%;
+  }
+
+  #legend {
+    position: absolute;
+    bottom: 16px;
+    right: 16px;
+    background: rgba(10,12,16,0.85);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 10px 14px;
+    backdrop-filter: blur(8px);
+    font-family: 'Space Mono', monospace;
+    font-size: 10px;
+  }
+
+  #legend-title {
+    color: var(--muted);
+    letter-spacing: 1px;
+    margin-bottom: 6px;
+    font-size: 9px;
+    text-transform: uppercase;
+  }
+
+  .legend-item {
+    display: flex;
+    align-items: center;
+    gap: 7px;
+    padding: 2px 0;
+  }
+
+  .legend-dot {
+    width: 10px;
+    height: 10px;
+    border-radius: 2px;
+    flex-shrink: 0;
+  }
+
+  #tooltip {
+    position: absolute;
+    background: rgba(17,19,24,0.95);
+    border: 1px solid var(--accent);
+    border-radius: 8px;
+    padding: 10px 14px;
+    font-family: 'Space Mono', monospace;
+    font-size: 11px;
+    pointer-events: none;
+    display: none;
+    z-index: 100;
+    min-width: 150px;
+  }
+
+  #tooltip .tip-id { color: var(--accent); font-weight: 700; font-size: 13px; }
+  #tooltip .tip-dim { color: var(--muted); margin-top: 3px; }
+  #tooltip .tip-pos { color: var(--accent2); margin-top: 2px; }
+
+  #controls-hint {
+    position: absolute;
+    bottom: 16px;
+    left: 16px;
+    background: rgba(10,12,16,0.75);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 8px 12px;
+    font-size: 9px;
+    font-family: 'Space Mono', monospace;
+    color: var(--muted);
+    line-height: 1.8;
+  }
+
+  #no-result {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    font-family: 'Space Mono', monospace;
+    color: var(--muted);
+    font-size: 13px;
+    gap: 10px;
+    pointer-events: none;
+  }
+
+  #no-result .big { font-size: 40px; }
+
+  .algo-select {
+    display: flex;
+    gap: 6px;
+    margin-bottom: 8px;
+  }
+
+  .algo-btn {
+    flex: 1;
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 5px;
+    color: var(--muted);
+    font-family: 'Space Mono', monospace;
+    font-size: 9px;
+    padding: 6px;
+    cursor: pointer;
+    text-align: center;
+    transition: all 0.2s;
+    letter-spacing: 0.5px;
+  }
+
+  .algo-btn.active { border-color: var(--accent2); color: var(--accent2); background: rgba(0,153,255,0.08); }
+
+  .tag {
+    display: inline-block;
+    background: rgba(0,229,160,0.1);
+    border: 1px solid rgba(0,229,160,0.3);
+    border-radius: 3px;
+    padding: 1px 5px;
+    font-size: 9px;
+    font-family: 'Space Mono', monospace;
+    color: var(--accent);
+    margin-left: 6px;
+  }
+
+  .fragile-toggle {
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    color: var(--muted);
+    font-family: 'Space Mono', monospace;
+    font-size: 10px;
+    padding: 7px 10px;
+    width: 100%;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    transition: all 0.2s;
+    user-select: none;
+    letter-spacing: 0.5px;
+  }
+
+  .fragile-toggle.active {
+    border-color: #ff6b35;
+    color: #ff6b35;
+    background: rgba(255,107,53,0.08);
+  }
+
+  .fragile-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 3px;
+    background: rgba(255,107,53,0.15);
+    border: 1px solid rgba(255,107,53,0.5);
+    border-radius: 3px;
+    padding: 1px 5px;
+    font-size: 9px;
+    font-family: 'Space Mono', monospace;
+    color: #ff6b35;
+    margin-left: 4px;
+    flex-shrink: 0;
+  }
+
+  .fragile-icon {
+    font-size: 12px;
+    line-height: 1;
+  }
+
+  .pkg-item.is-fragile {
+    border-color: rgba(255,107,53,0.35);
+  }
+
+  .pkg-item.is-fragile:hover {
+    border-color: #ff6b35;
+  }
+
+  .fragile-warn {
+    background: rgba(255,107,53,0.08);
+    border: 1px solid rgba(255,107,53,0.3);
+    border-radius: 5px;
+    padding: 6px 10px;
+    font-size: 10px;
+    font-family: 'Space Mono', monospace;
+    color: #ff9966;
+    margin-top: 6px;
+    line-height: 1.5;
+    display: none;
+  }
+
+  ::-webkit-scrollbar { width: 4px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
+</style>
+</head>
+<body>
+
+<!-- SIDEBAR -->
+<div id="sidebar">
+  <div id="sidebar-header">
+    <h1>⬛ DEPO OPTİMİZATÖRÜ</h1>
+    <p>3D BIN PACKING ENGINE v1.0</p>
+  </div>
+
+  <div id="sidebar-body">
+    <!-- WAREHOUSE -->
+    <div class="section-label">Depo Boyutları (Genişlik × Derinlik × Yükseklik)</div>
+    <div class="input-row">
+      <div class="input-group">
+        <label>GENİŞLİK (X)</label>
+        <input type="number" id="wh-w" value="10" min="1">
+      </div>
+      <div class="input-group">
+        <label>DERİNLİK (Z)</label>
+        <input type="number" id="wh-d" value="10" min="1">
+      </div>
+      <div class="input-group">
+        <label>YÜKSEKLİK (Y)</label>
+        <input type="number" id="wh-h" value="8" min="1">
+      </div>
+    </div>
+
+    <div class="divider"></div>
+
+    <!-- ALGORITHM -->
+    <div class="section-label">Algoritma <span class="tag">REKÜRSİF</span></div>
+    <div class="algo-select">
+      <div class="algo-btn active" id="algo-guillotine" onclick="setAlgo('guillotine')">GUİLLOTİNE</div>
+      <div class="algo-btn" id="algo-bnb" onclick="setAlgo('bnb')">B&amp;B</div>
+      <div class="algo-btn" id="algo-ep" onclick="setAlgo('ep')">EXT.POINT</div>
+    </div>
+    <div style="font-size:10px;color:var(--muted);font-family:Space Mono,monospace;margin-top:4px;line-height:1.6">
+      <b style="color:var(--accent2)">Guillotine</b>: Alanı rekürsiyon ile keser, hızlı &amp; güçlü<br>
+      <b style="color:var(--accent2)">B&amp;B</b>: Branch &amp; Bound — global optimum (yavaş)<br>
+      <b style="color:var(--accent2)">Ext.Point</b>: Extreme point rekürsiyon
+    </div>
+
+    <div class="divider"></div>
+
+    <!-- ADD PACKAGE -->
+    <div class="section-label">Paket Ekle</div>
+    <div class="input-row">
+      <div class="input-group full-row" style="grid-column: 1 / -1">
+        <label>PAKET ID</label>
+        <input type="text" id="pkg-id" placeholder="örn: PKG-001">
+      </div>
+    </div>
+    <div class="input-row">
+      <div class="input-group">
+        <label>GEN (W)</label>
+        <input type="number" id="pkg-w" value="2" min="0.1" step="0.1">
+      </div>
+      <div class="input-group">
+        <label>DER (D)</label>
+        <input type="number" id="pkg-d" value="2" min="0.1" step="0.1">
+      </div>
+      <div class="input-group">
+        <label>YÜK (H)</label>
+        <input type="number" id="pkg-h" value="2" min="0.1" step="0.1">
+      </div>
+    </div>
+    <div class="input-row">
+      <div class="input-group">
+        <label>ADET</label>
+        <input type="number" id="pkg-qty" value="1" min="1">
+      </div>
+      <div class="input-group" style="grid-column: span 2; display:flex; align-items:flex-end;">
+        <div class="fragile-toggle" id="fragile-toggle" onclick="toggleFragile()">
+          <span class="fragile-icon" id="fragile-icon">📦</span>
+          <span id="fragile-label">KIRILGAN DEĞİL</span>
+        </div>
+      </div>
+    </div>
+    <button class="btn btn-primary" onclick="addPackage()">+ PAKET EKLE</button>
+    <button class="btn btn-secondary" onclick="loadPreset()">📦 ÖRNEK YÜKLEMESİ</button>
+
+    <div class="divider"></div>
+
+    <!-- PACKAGE LIST -->
+    <div class="section-label">Paket Listesi</div>
+    <div id="pkg-list"></div>
+    <div class="fragile-warn" id="fragile-warn">⚠️ Kırılgan paketler en üste yerleştirilir,<br>üzerlerine hiçbir şey konmaz.</div>
+
+    <div class="divider"></div>
+
+    <button class="btn btn-run" onclick="runOptimize()">▶ OPTİMİZASYONU ÇALIŞTIR</button>
+    <button class="btn btn-secondary" onclick="clearAll()">↺ Sıfırla</button>
+  </div>
+
+  <div id="stats-panel">
+    <div class="section-label" style="margin-top:0">Sonuçlar</div>
+    <div class="stat-row"><span class="stat-label">Yerleştirilen</span><span class="stat-val" id="s-placed">—</span></div>
+    <div class="stat-row"><span class="stat-label">Yerleştirilemeyen</span><span class="stat-val warn" id="s-unplaced">—</span></div>
+    <div class="stat-row"><span class="stat-label">Kırılgan (üstte)</span><span class="stat-val" style="color:#ff6b35" id="s-fragile">—</span></div>
+    <div class="stat-row"><span class="stat-label">Hacim Kullanımı</span><span class="stat-val" id="s-fill">—</span></div>
+    <div class="fill-bar-bg"><div class="fill-bar" id="fill-bar" style="width:0%"></div></div>
+    <div class="stat-row" style="margin-top:6px"><span class="stat-label">Depo Hacmi</span><span class="stat-val" id="s-total">—</span></div>
+    <div class="stat-row"><span class="stat-label">Süre</span><span class="stat-val" id="s-time">—</span></div>
+  </div>
+</div>
+
+<!-- MAIN -->
+<div id="main">
+  <div id="toolbar">
+    <span style="font-size:11px;color:var(--accent)">GÖRÜNÜM</span>
+    <div class="toolbar-chip active" id="v-persp" onclick="setView('persp')">PERSPEKTİF</div>
+    <div class="toolbar-chip" id="v-top" onclick="setView('top')">ÜSTTEN</div>
+    <div class="toolbar-chip" id="v-front" onclick="setView('front')">ÖNDEN</div>
+    <div class="toolbar-chip" id="v-side" onclick="setView('side')">YANDAN</div>
+    <div class="toolbar-chip" id="v-wireframe" onclick="toggleWireframe()">KAFES</div>
+    <div id="toolbar-msg">🖱 Döndür · Scroll: Zoom · Shift+Drag: Kaydır</div>
+  </div>
+
+  <div id="canvas-container">
+    <canvas id="three-canvas"></canvas>
+    <div id="no-result">
+      <div class="big">📦</div>
+      <div>Paketleri ekle ve optimizasyonu çalıştır</div>
+    </div>
+    <div id="controls-hint">
+      LMB: Döndür<br>
+      SCROLL: Zoom<br>
+      RMB/Shift: Kaydır<br>
+      HOVER: Bilgi
+    </div>
+    <div id="legend"></div>
+    <div id="tooltip"></div>
+  </div>
+</div>
+
+<script>
+// ===== STATE =====
+let packages = [];
+let placedBoxes = [];
+let pkgCounter = 1;
+let algo = 'greedy';
+let wireframe = false;
+let renderer, scene, camera, animFrameId;
+let isDragging = false, isRightDrag = false;
+let prevMouse = { x: 0, y: 0 };
+let spherical = { theta: Math.PI / 4, phi: Math.PI / 3, radius: 25 };
+let panOffset = { x: 0, y: 0 };
+let boxMeshes = [];
+let warehouseMesh = null;
+let raycaster, mouse;
+let hoveredObj = null;
+
+// Palette
+const PALETTE = [
+  '#00e5a0','#0099ff','#ff6b35','#a855f7','#facc15',
+  '#ec4899','#14b8a6','#f97316','#6366f1','#84cc16',
+  '#e11d48','#0ea5e9','#8b5cf6','#10b981','#f59e0b',
+  '#ef4444','#22d3ee','#d946ef','#65a30d','#2563eb'
+];
+
+// ===== ALGO =====
+function setAlgo(a) {
+  algo = a;
+  ['guillotine','bnb','ep'].forEach(x => {
+    document.getElementById('algo-'+x).classList.toggle('active', x === a);
+  });
+}
+
+// ===== PACKAGES =====
+let fragileMode = false;
+
+function toggleFragile() {
+  fragileMode = !fragileMode;
+  const toggle = document.getElementById('fragile-toggle');
+  const label = document.getElementById('fragile-label');
+  const icon = document.getElementById('fragile-icon');
+  toggle.classList.toggle('active', fragileMode);
+  label.textContent = fragileMode ? 'KIRILGAN' : 'KIRILGAN DEĞİL';
+  icon.textContent = fragileMode ? '🔴' : '📦';
+}
+
+function addPackage() {
+  const id = document.getElementById('pkg-id').value.trim() || `PKG-${String(pkgCounter).padStart(3,'0')}`;
+  const w = parseFloat(document.getElementById('pkg-w').value) || 1;
+  const d = parseFloat(document.getElementById('pkg-d').value) || 1;
+  const h = parseFloat(document.getElementById('pkg-h').value) || 1;
+  const qty = parseInt(document.getElementById('pkg-qty').value) || 1;
+  const fragile = fragileMode;
+  for (let i = 0; i < qty; i++) {
+    const uid = qty > 1 ? `${id}-${i+1}` : id;
+    packages.push({ id: uid, w, d, h, fragile, color: fragile ? '#ff6b35' : PALETTE[packages.filter(p=>!p.fragile).length % PALETTE.length] });
+  }
+  pkgCounter++;
+  document.getElementById('pkg-id').value = '';
+  renderPkgList();
+}
+
+function removePackage(idx) {
+  packages.splice(idx, 1);
+  renderPkgList();
+}
+
+function renderPkgList() {
+  const el = document.getElementById('pkg-list');
+  const warnEl = document.getElementById('fragile-warn');
+  const hasFragile = packages.some(p => p.fragile);
+  warnEl.style.display = hasFragile ? 'block' : 'none';
+  if (!packages.length) { el.innerHTML = '<div style="color:var(--muted);font-size:11px;font-family:Space Mono,monospace;padding:8px 0">Henüz paket eklenmedi.</div>'; return; }
+  el.innerHTML = packages.map((p, i) => `
+    <div class="pkg-item ${p.fragile ? 'is-fragile' : ''}">
+      <div class="pkg-dot" style="background:${p.color}"></div>
+      <div class="pkg-info">
+        <div class="pkg-id">${p.id}${p.fragile ? '<span class="fragile-badge">🔴 KIRILGAN</span>' : ''}</div>
+        <div class="pkg-dims">${p.w} × ${p.d} × ${p.h} birim</div>
+      </div>
+      <button class="btn btn-danger" onclick="removePackage(${i})">✕</button>
+    </div>
+  `).join('');
+}
+
+function loadPreset() {
+  packages = [];
+  const items = [
+    {id:'BÜYÜK-A', w:3, d:3, h:3, fragile:false}, {id:'BÜYÜK-B', w:3, d:3, h:3, fragile:false},
+    {id:'ORTA-A', w:2, d:2, h:2, fragile:false}, {id:'ORTA-B', w:2, d:2, h:2, fragile:false}, {id:'ORTA-C', w:2, d:2, h:2, fragile:false},
+    {id:'CAM-1', w:2, d:1, h:2, fragile:true}, {id:'CAM-2', w:1, d:2, h:2, fragile:true},
+    {id:'UZUN-A', w:4, d:1, h:1, fragile:false}, {id:'UZUN-B', w:1, d:4, h:1, fragile:false},
+    {id:'KÜÇÜK-1', w:1, d:1, h:1, fragile:false}, {id:'KÜÇÜK-2', w:1, d:1, h:1, fragile:false},
+    {id:'KÜÇÜK-3', w:1, d:1, h:1, fragile:false}, {id:'KÜÇÜK-4', w:1, d:1, h:1, fragile:false},
+    {id:'VAZO', w:1, d:1, h:3, fragile:true},
+    {id:'YAY-A', w:2, d:1, h:3, fragile:false}, {id:'YAY-B', w:1, d:2, h:3, fragile:false},
+    {id:'KARE-A', w:2, d:2, h:1, fragile:false}, {id:'KARE-B', w:2, d:2, h:1, fragile:false},
+  ];
+  items.forEach((it, i) => {
+    const color = it.fragile ? '#ff6b35' : PALETTE[packages.filter(p=>!p.fragile).length % PALETTE.length];
+    packages.push({ ...it, color });
+  });
+  pkgCounter = packages.length + 1;
+  renderPkgList();
+}
+
+function clearAll() {
+  packages = [];
+  placedBoxes = [];
+  pkgCounter = 1;
+  fragileMode = false;
+  document.getElementById('fragile-toggle').classList.remove('active');
+  document.getElementById('fragile-label').textContent = 'KIRILGAN DEĞİL';
+  document.getElementById('fragile-icon').textContent = '📦';
+  renderPkgList();
+  updateStats([], 0, 0, 0, null);
+  if (scene) rebuildScene();
+  document.getElementById('no-result').style.display = 'flex';
+  document.getElementById('legend').innerHTML = '';
+}
+
+// ===== YARDIMCI FONKSİYONLAR =====
+
+// Tüm 6 rotasyonu üret (eşsiz olanları)
+function getRotations(w, d, h) {
+  const seen = new Set();
+  const result = [];
+  for (const [a,b,c] of [[w,d,h],[w,h,d],[d,w,h],[d,h,w],[h,w,d],[h,d,w]]) {
+    const key = [a,b,c].join(',');
+    if (!seen.has(key)) { seen.add(key); result.push([a,b,c]); }
+  }
+  return result;
+}
+
+// Çakışma kontrolü
+function overlaps3D(a, b) {
+  return !(a.x+a.w<=b.x || b.x+b.w<=a.x ||
+           a.y+a.h<=b.y || b.y+b.h<=a.y ||
+           a.z+a.d<=b.z || b.z+b.d<=a.z);
+}
+
+// Sığma kontrolü
+function canFit(px,py,pz,pw,pd,ph, ww,wd,wh, occupied) {
+  if (px+pw>ww || py+ph>wh || pz+pd>wd) return false;
+  for (const o of occupied) {
+    if (overlaps3D({x:px,y:py,z:pz,w:pw,d:pd,h:ph}, o)) return false;
+  }
+  return true;
+}
+
+// Hacim hesapla
+function totalVol(placed) {
+  return placed.reduce((s,b) => s + b.w*b.d*b.h, 0);
+}
+
+// =====================================================
+// KIRILGAN KISIT KONTROLÜ
+// =====================================================
+// Bir kutu kırılgan değilse, altında kırılgan kutu olamaz.
+// Yani: kırılgan olmayan bir kutu yerleştirilirken, tam altında
+// (X-Z düzleminde örtüşen) kırılgan kutu var mı diye kontrol et.
+// Kırılgan kutu: üstüne başka bir şey yerleştirilemez.
+// =====================================================
+
+function fragileOK(px, py, pz, pw, pd, ph, pkg, occupied) {
+  // 1) Bu paket normal → altında kırılgan var mı?
+  if (!pkg.fragile) {
+    for (const o of occupied) {
+      if (!o.pkg.fragile) continue;
+      // o kutusunun tam üstünde mi oturuyoruz?
+      const touchY = Math.abs(py - (o.y + o.h)) < 0.001;
+      if (!touchY) continue;
+      // XZ düzleminde örtüşüyor mu?
+      const overlapX = px < o.x+o.w && px+pw > o.x;
+      const overlapZ = pz < o.z+o.d && pz+pd > o.z;
+      if (overlapX && overlapZ) return false; // normal kutu kırılganın üstüne inemez
+    }
+  }
+  // 2) Bu paket kırılgan → üstünde zaten bir şey var mı?
+  if (pkg.fragile) {
+    for (const o of occupied) {
+      const touchY = Math.abs(o.y - (py + ph)) < 0.001;
+      if (!touchY) continue;
+      const overlapX = px < o.x+o.w && px+pw > o.x;
+      const overlapZ = pz < o.z+o.d && pz+pd > o.z;
+      if (overlapX && overlapZ) return false; // kırılganın üstünde bir şey var
+    }
+  }
+  return true;
+}
+
+// =====================================================
+// ALGORİTMA 1: REKÜRSİF GUİLLOTİNE CUT (3D)
+// =====================================================
+// Depo alanını önce bir kutu yerleştir, kalan 3 alt-alana (guillotine kesileri)
+// rekürsiyon ile devam et. Her adımda en yüksek hacim doluluk oranını seçer.
+// =====================================================
+
+function packGuillotine(ww, wh_d, wh_h, pkgs) {
+  const spaces = [{ x:0, y:0, z:0, w:ww, d:wh_d, h:wh_h }];
+  const placed = [];
+  const unplaced = [];
+  const occupied = []; // kırılgan kontrolü için
+
+  // Önce normal paketler (hacimlere göre büyükten küçük), sonra kırılganlar
+  const normals = [...pkgs].filter(p=>!p.fragile).sort((a,b)=>(b.w*b.d*b.h)-(a.w*a.d*a.h));
+  const fragiles = [...pkgs].filter(p=>p.fragile).sort((a,b)=>(b.w*b.d*b.h)-(a.w*a.d*a.h));
+  const sorted = [...normals, ...fragiles];
+
+  for (const pkg of sorted) {
+    const result = _guillotinePlaceRecursive(pkg, spaces, occupied, 0);
+    if (result) {
+      placed.push(result.box);
+      occupied.push(result.box);
+      spaces.splice(result.spaceIdx, 1);
+      spaces.push(...result.newSpaces);
+      spaces.sort((a,b) => (b.w*b.d*b.h)-(a.w*a.d*a.h));
+    } else {
+      unplaced.push(pkg);
+    }
+  }
+  return { placed, unplaced };
+}
+
+function _guillotinePlaceRecursive(pkg, spaces, occupied, depth=0) {
+  if (depth > 200) return null;
+
+  let bestScore = -1;
+  let bestResult = null;
+
+  for (let si = 0; si < spaces.length; si++) {
+    const sp = spaces[si];
+    const rotations = getRotations(pkg.w, pkg.d, pkg.h);
+
+    for (const [rw,rd,rh] of rotations) {
+      if (rw > sp.w || rd > sp.d || rh > sp.h) continue;
+      // Kırılgan kısıt kontrolü
+      if (!fragileOK(sp.x, sp.y, sp.z, rw, rd, rh, pkg, occupied)) continue;
+
+      const fillRatio = (rw*rd*rh) / (sp.w*sp.d*sp.h);
+      const lowScore = 1 - (sp.y / 1000);
+      const score = fillRatio * 0.7 + lowScore * 0.3;
+
+      if (score > bestScore) {
+        bestScore = score;
+        const newSpaces = _guillotineSplit(sp, rw, rd, rh);
+        bestResult = {
+          box: { x:sp.x, y:sp.y, z:sp.z, w:rw, d:rd, h:rh, pkg },
+          spaceIdx: si,
+          newSpaces
+        };
+      }
+    }
+  }
+  return bestResult;
+}
+
+// Guillotine bölme: bir space'e kutu yerleştirince kalan 3 alt-alan
+function _guillotineSplit(sp, bw, bd, bh) {
+  const spaces = [];
+  // Sağ parça (X ekseni boyunca)
+  if (sp.w - bw > 0.001) {
+    spaces.push({ x: sp.x+bw, y: sp.y, z: sp.z, w: sp.w-bw, d: sp.d, h: sp.h });
+  }
+  // Ön parça (Z ekseni boyunca, sadece kutunun genişliği kadar)
+  if (sp.d - bd > 0.001) {
+    spaces.push({ x: sp.x, y: sp.y, z: sp.z+bd, w: bw, d: sp.d-bd, h: sp.h });
+  }
+  // Üst parça (Y ekseni boyunca, kutu tabanı kadar)
+  if (sp.h - bh > 0.001) {
+    spaces.push({ x: sp.x, y: sp.y+bh, z: sp.z, w: bw, d: bd, h: sp.h-bh });
+  }
+  return spaces;
+}
+
+// =====================================================
+// ALGORİTMA 2: REKÜRSİF BRANCH & BOUND
+// =====================================================
+// Tüm permütasyonları dener, en yüksek toplam hacmi bulan dalı seçer.
+// Küçük listeler için global optimuma ulaşır. Büyük listelerde zaman sınırı.
+// =====================================================
+
+function packBnB(ww, wh_d, wh_h, pkgs) {
+  const t0 = performance.now();
+  const TIME_LIMIT = 3000;
+
+  const greedyResult = packGuillotine(ww, wh_d, wh_h, pkgs);
+  let bestVol = totalVol(greedyResult.placed);
+  let bestPlaced = greedyResult.placed;
+
+  // Normal önce, kırılgan sonra
+  const normals = [...pkgs].filter(p=>!p.fragile).sort((a,b)=>(b.w*b.d*b.h)-(a.w*a.d*a.h));
+  const fragiles = [...pkgs].filter(p=>p.fragile).sort((a,b)=>(b.w*b.d*b.h)-(a.w*a.d*a.h));
+  const sorted = [...normals, ...fragiles];
+
+  function bnbRecurse(remaining, occupied, placedSoFar, currentVol, extremePts) {
+    if (performance.now() - t0 > TIME_LIMIT) return;
+    if (remaining.length === 0) {
+      if (currentVol > bestVol) { bestVol = currentVol; bestPlaced = [...placedSoFar]; }
+      return;
+    }
+    const remainingMax = remaining.reduce((s,p) => s + p.w*p.d*p.h, 0);
+    if (currentVol + remainingMax <= bestVol) return;
+
+    const [pkg, ...rest] = remaining;
+    const rotations = getRotations(pkg.w, pkg.d, pkg.h);
+
+    let tried = 0;
+    const epsToTry = extremePts.slice(0, 12);
+    for (const ep of epsToTry) {
+      for (const [rw,rd,rh] of rotations) {
+        if (!canFit(ep.x,ep.y,ep.z,rw,rd,rh,ww,wh_d,wh_h,occupied)) continue;
+        if (!fragileOK(ep.x,ep.y,ep.z,rw,rd,rh,pkg,occupied)) continue;
+        const box = {x:ep.x,y:ep.y,z:ep.z,w:rw,d:rd,h:rh,pkg};
+        const newOcc = [...occupied, box];
+        const newEPs = _updateExtremePoints(extremePts, ep, rw,rd,rh);
+        bnbRecurse(rest, newOcc, [...placedSoFar, box], currentVol + rw*rd*rh, newEPs);
+        tried++;
+        if (tried >= 4) break;
+      }
+      if (tried >= 4) break;
+    }
+    bnbRecurse(rest, occupied, placedSoFar, currentVol, extremePts);
+  }
+
+  bnbRecurse(sorted, [], [], 0, [{x:0,y:0,z:0}]);
+
+  const placedIds = new Set(bestPlaced.map(b => b.pkg.id));
+  const unplaced = pkgs.filter(p => !placedIds.has(p.id));
+  return { placed: bestPlaced, unplaced };
+}
+
+function _updateExtremePoints(eps, used, rw, rd, rh) {
+  const newEPs = eps.filter(ep => !(ep.x===used.x && ep.y===used.y && ep.z===used.z));
+  newEPs.push({x:used.x+rw, y:used.y, z:used.z});
+  newEPs.push({x:used.x, y:used.y+rh, z:used.z});
+  newEPs.push({x:used.x, y:used.y, z:used.z+rd});
+  return newEPs.filter((ep,i,arr) =>
+    arr.findIndex(e=>e.x===ep.x&&e.y===ep.y&&e.z===ep.z)===i
+  );
+}
+
+// =====================================================
+// ALGORİTMA 3: REKÜRSİF EXTREME POINT (Gelişmiş)
+// =====================================================
+// Her adımda tüm extreme point'leri ve tüm rotasyonları rekürsiyon ile
+// değerlendirip, en az boşluk bırakan konfigürasyonu seçer.
+// =====================================================
+
+function packExtremePoint(ww, wh_d, wh_h, pkgs) {
+  // Normal önce, kırılgan sonra
+  const normals = [...pkgs].filter(p=>!p.fragile).sort((a,b)=>(b.w*b.d*b.h)-(a.w*a.d*a.h));
+  const fragiles = [...pkgs].filter(p=>p.fragile).sort((a,b)=>(b.w*b.d*b.h)-(a.w*a.d*a.h));
+  const sorted = [...normals, ...fragiles];
+  const occupied = [];
+  const placed = [];
+  const unplaced = [];
+  let extremePts = [{x:0,y:0,z:0}];
+
+  for (const pkg of sorted) {
+    const result = _epPlaceRecursive(pkg, extremePts, occupied, ww, wh_d, wh_h, 0);
+    if (result) {
+      occupied.push(result.box);
+      placed.push(result.box);
+      extremePts = _epAddAndClean(extremePts, result.ep, result.box, occupied, ww, wh_d, wh_h);
+    } else {
+      unplaced.push(pkg);
+    }
+  }
+  return { placed, unplaced };
+}
+
+function _epPlaceRecursive(pkg, eps, occupied, ww, wd, wh, depth) {
+  if (depth > 3) return null; // rekürsiyon derinliği sınırı
+
+  let bestScore = Infinity;
+  let bestResult = null;
+  const rotations = getRotations(pkg.w, pkg.d, pkg.h);
+
+  // Önce kontak yüzey alanına (contact surface) göre sırala - kutuların birbirine yapışması için
+  for (const ep of eps) {
+    for (const [rw,rd,rh] of rotations) {
+      if (!canFit(ep.x,ep.y,ep.z,rw,rd,rh,ww,wd,wh,occupied)) continue;
+      if (!fragileOK(ep.x,ep.y,ep.z,rw,rd,rh,pkg,occupied)) continue;
+
+      const box = {x:ep.x, y:ep.y, z:ep.z, w:rw, d:rd, h:rh, pkg};
+
+      // Skor: daha düşük merkez y = daha iyi (yerçekimi modeli),
+      //       zemine yakın + duvara yakın kombinasyonu
+      const cy = ep.y + rh/2;
+      const cx = ep.x + rw/2;
+      const cz = ep.z + rd/2;
+      const gravityScore = cy * 4;
+      const wallScore = Math.min(ep.x, ep.z) * 0.5;
+      // Kontak yüzey puanı (komşu kutularla temas ne kadar fazla?)
+      const contactScore = -_contactSurface(box, occupied) * 0.3;
+      const score = gravityScore + wallScore + contactScore;
+
+      if (score < bestScore) {
+        bestScore = score;
+        bestResult = { box, ep, score };
+      }
+    }
+  }
+
+  // Hiçbir EP'e sığmadıysa, mevcut kutuların üzerinde yeni EP'ler türet ve tekrar dene
+  if (!bestResult && depth < 2) {
+    const derivedEPs = _deriveExtraEPs(eps, occupied, ww, wd, wh);
+    for (const ep of derivedEPs) {
+      for (const [rw,rd,rh] of rotations) {
+        if (!canFit(ep.x,ep.y,ep.z,rw,rd,rh,ww,wd,wh,occupied)) continue;
+        if (!fragileOK(ep.x,ep.y,ep.z,rw,rd,rh,pkg,occupied)) continue;
+        const box = {x:ep.x, y:ep.y, z:ep.z, w:rw, d:rd, h:rh, pkg};
+        const cy = ep.y + rh/2;
+        const score = cy * 4 + Math.min(ep.x,ep.z)*0.5;
+        if (score < bestScore) { bestScore = score; bestResult = { box, ep, score }; }
+      }
+    }
+  }
+
+  return bestResult;
+}
+
+function _contactSurface(box, occupied) {
+  let contact = 0;
+  // zemin teması
+  if (box.y === 0) contact += box.w * box.d;
+  for (const o of occupied) {
+    // yan temas X
+    if (Math.abs(box.x - (o.x+o.w)) < 0.001 || Math.abs(o.x - (box.x+box.w)) < 0.001) {
+      const oy1 = Math.max(box.y, o.y), oy2 = Math.min(box.y+box.h, o.y+o.h);
+      const oz1 = Math.max(box.z, o.z), oz2 = Math.min(box.z+box.d, o.z+o.d);
+      if (oy2>oy1 && oz2>oz1) contact += (oy2-oy1)*(oz2-oz1);
+    }
+    // yan temas Z
+    if (Math.abs(box.z - (o.z+o.d)) < 0.001 || Math.abs(o.z - (box.z+box.d)) < 0.001) {
+      const ox1 = Math.max(box.x, o.x), ox2 = Math.min(box.x+box.w, o.x+o.w);
+      const oy1 = Math.max(box.y, o.y), oy2 = Math.min(box.y+box.h, o.y+o.h);
+      if (ox2>ox1 && oy2>oy1) contact += (ox2-ox1)*(oy2-oy1);
+    }
+    // üst/alt temas Y
+    if (Math.abs(box.y - (o.y+o.h)) < 0.001 || Math.abs(o.y - (box.y+box.h)) < 0.001) {
+      const ox1 = Math.max(box.x, o.x), ox2 = Math.min(box.x+box.w, o.x+o.w);
+      const oz1 = Math.max(box.z, o.z), oz2 = Math.min(box.z+box.d, o.z+o.d);
+      if (ox2>ox1 && oz2>oz1) contact += (ox2-ox1)*(oz2-oz1);
+    }
+  }
+  return contact;
+}
+
+function _epAddAndClean(eps, usedEP, box, occupied, ww, wd, wh) {
+  // Kullanılan EP'i kaldır
+  let newEPs = eps.filter(ep => !(ep.x===usedEP.x && ep.y===usedEP.y && ep.z===usedEP.z));
+  // 3 yeni EP ekle
+  newEPs.push({x:box.x+box.w, y:box.y, z:box.z});
+  newEPs.push({x:box.x, y:box.y+box.h, z:box.z});
+  newEPs.push({x:box.x, y:box.y, z:box.z+box.d});
+  // Depo dışındakileri kaldır
+  newEPs = newEPs.filter(ep => ep.x<ww && ep.y<wh && ep.z<wd);
+  // Dolu olanları kaldır (zaten occupied olan noktalar)
+  newEPs = newEPs.filter(ep => {
+    for (const o of occupied) {
+      if (ep.x>=o.x && ep.x<o.x+o.w && ep.y>=o.y && ep.y<o.y+o.h && ep.z>=o.z && ep.z<o.z+o.d) return false;
+    }
+    return true;
+  });
+  // Duplikaları kaldır
+  return newEPs.filter((ep,i,arr) =>
+    arr.findIndex(e=>e.x===ep.x&&e.y===ep.y&&e.z===ep.z)===i
+  );
+}
+
+function _deriveExtraEPs(eps, occupied, ww, wd, wh) {
+  // Yerleştirilmiş kutuların köşelerinden ek EP türet
+  const extra = [];
+  for (const o of occupied) {
+    extra.push({x:o.x+o.w, y:o.y, z:o.z});
+    extra.push({x:o.x, y:o.y+o.h, z:o.z});
+    extra.push({x:o.x, y:o.y, z:o.z+o.d});
+    extra.push({x:o.x+o.w, y:o.y+o.h, z:o.z});
+    extra.push({x:o.x+o.w, y:o.y, z:o.z+o.d});
+    extra.push({x:o.x, y:o.y+o.h, z:o.z+o.d});
+  }
+  return extra.filter(ep =>
+    ep.x<ww && ep.y<wh && ep.z<wd &&
+    !eps.find(e=>e.x===ep.x&&e.y===ep.y&&e.z===ep.z)
+  );
+}
+
+// ===== RUN =====
+function runOptimize() {
+  if (!packages.length) { alert('Önce paket ekleyin!'); return; }
+  const ww = parseFloat(document.getElementById('wh-w').value) || 10;
+  const wd = parseFloat(document.getElementById('wh-d').value) || 10;
+  const wh = parseFloat(document.getElementById('wh-h').value) || 8;
+
+  // Loading göster
+  document.getElementById('s-fill').textContent = '⏳';
+  document.getElementById('s-placed').textContent = '...';
+
+  // Async çalıştır (UI donmasın)
+  setTimeout(() => {
+    const t0 = performance.now();
+    let result;
+    if (algo === 'guillotine') result = packGuillotine(ww, wd, wh, packages);
+    else if (algo === 'bnb')   result = packBnB(ww, wd, wh, packages);
+    else                       result = packExtremePoint(ww, wd, wh, packages);
+    const elapsed = (performance.now() - t0).toFixed(0);
+
+    placedBoxes = result.placed;
+    const totalVol2 = ww * wd * wh;
+    const usedVol = result.placed.reduce((s,b) => s + b.w*b.d*b.h, 0);
+    const fillPct = (usedVol / totalVol2 * 100).toFixed(1);
+
+    updateStats(result.placed, result.unplaced.length, fillPct, totalVol2, elapsed);
+    document.getElementById('no-result').style.display = 'none';
+    initThree(ww, wd, wh);
+    buildLegend(result.placed);
+  }, 20);
+}
+
+function updateStats(placedArr, unplaced, fill, total, elapsed) {
+  const placedCount = Array.isArray(placedArr) ? placedArr.length : (placedArr || 0);
+  const fragileCount = Array.isArray(placedArr) ? placedArr.filter(b => b.pkg && b.pkg.fragile).length : 0;
+  document.getElementById('s-placed').textContent = placedCount || '—';
+  document.getElementById('s-unplaced').textContent = unplaced !== undefined && unplaced !== 0 ? unplaced : (placedCount ? '0' : '—');
+  document.getElementById('s-fragile').textContent = placedCount ? fragileCount : '—';
+  document.getElementById('s-fill').textContent = fill ? `${fill}%` : '—';
+  document.getElementById('s-total').textContent = total ? `${total} u³` : '—';
+  document.getElementById('s-time').textContent = elapsed ? `${elapsed} ms` : '—';
+  document.getElementById('fill-bar').style.width = fill ? `${Math.min(fill,100)}%` : '0%';
+  const fv = document.getElementById('s-fill');
+  if (fill) { fv.className = 'stat-val ' + (fill >= 70 ? 'ok' : fill >= 40 ? '' : 'warn'); }
+}
+
+function buildLegend(placed) {
+  const legendEl = document.getElementById('legend');
+  if (!placed.length) { legendEl.innerHTML = ''; return; }
+  const unique = placed.slice(0, 10);
+  legendEl.innerHTML = `<div id="legend-title">PAKETLER</div>` +
+    unique.map(b => `
+      <div class="legend-item">
+        <div class="legend-dot" style="background:${b.pkg.color};${b.pkg.fragile ? 'border:1.5px solid #fff;' : ''}"></div>
+        <span style="color:var(--text)">${b.pkg.id}</span>
+        ${b.pkg.fragile ? '<span style="color:#ff6b35;font-size:9px;margin-left:3px">🔴</span>' : ''}
+        <span style="color:var(--muted);margin-left:4px">${b.w}×${b.d}×${b.h}</span>
+      </div>
+    `).join('') + (placed.length > 10 ? `<div style="color:var(--muted);margin-top:4px">+${placed.length-10} daha...</div>` : '');
+}
+
+// ===== THREE.JS =====
+function initThree(ww, wd, wh) {
+  const canvas = document.getElementById('three-canvas');
+  const container = document.getElementById('canvas-container');
+
+  if (renderer) {
+    renderer.dispose();
+    if (animFrameId) cancelAnimationFrame(animFrameId);
+  }
+
+  renderer = new THREE.WebGLRenderer({ canvas, antialias: true, alpha: false });
+  renderer.setPixelRatio(window.devicePixelRatio);
+  renderer.setSize(container.clientWidth, container.clientHeight);
+  renderer.shadowMap.enabled = true;
+  renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+  renderer.setClearColor(0x0a0c10);
+
+  scene = new THREE.Scene();
+  scene.fog = new THREE.FogExp2(0x0a0c10, 0.012);
+
+  // Camera
+  const aspect = container.clientWidth / container.clientHeight;
+  camera = new THREE.PerspectiveCamera(50, aspect, 0.1, 1000);
+  spherical = { theta: Math.PI/5, phi: Math.PI/3.5, radius: Math.max(ww,wd,wh) * 2.5 };
+  panOffset = { x: ww/2, y: wh/3, z: wd/2 };
+  updateCamera();
+
+  // Lights
+  const ambient = new THREE.AmbientLight(0x334455, 0.8);
+  scene.add(ambient);
+
+  const dirLight = new THREE.DirectionalLight(0xffffff, 1.2);
+  dirLight.position.set(ww*2, wh*3, wd*2);
+  dirLight.castShadow = true;
+  dirLight.shadow.mapSize.set(2048, 2048);
+  dirLight.shadow.camera.near = 0.1;
+  dirLight.shadow.camera.far = 200;
+  const sc = Math.max(ww,wd,wh)*1.5;
+  dirLight.shadow.camera.left = -sc; dirLight.shadow.camera.right = sc;
+  dirLight.shadow.camera.top = sc; dirLight.shadow.camera.bottom = -sc;
+  scene.add(dirLight);
+
+  const fillLight = new THREE.PointLight(0x0099ff, 0.5, ww*5);
+  fillLight.position.set(-ww, wh*2, -wd);
+  scene.add(fillLight);
+
+  // Grid floor
+  const gridHelper = new THREE.GridHelper(Math.max(ww,wd)*2, Math.max(ww,wd)*2, 0x1e2229, 0x161a20);
+  gridHelper.position.set(ww/2, -0.01, wd/2);
+  scene.add(gridHelper);
+
+  // Warehouse wireframe
+  const whGeo = new THREE.BoxGeometry(ww, wh, wd);
+  const whMat = new THREE.MeshBasicMaterial({
+    color: 0x1e2229,
+    wireframe: true,
+    transparent: true,
+    opacity: 0.4
+  });
+  warehouseMesh = new THREE.Mesh(whGeo, whMat);
+  warehouseMesh.position.set(ww/2, wh/2, wd/2);
+  scene.add(warehouseMesh);
+
+  // Floor
+  const floorGeo = new THREE.PlaneGeometry(ww, wd);
+  const floorMat = new THREE.MeshLambertMaterial({ color: 0x111318, transparent: true, opacity: 0.8 });
+  const floor = new THREE.Mesh(floorGeo, floorMat);
+  floor.rotation.x = -Math.PI/2;
+  floor.position.set(ww/2, 0, wd/2);
+  floor.receiveShadow = true;
+  scene.add(floor);
+
+  // Boxes
+  boxMeshes = [];
+  placedBoxes.forEach((box, idx) => {
+    const geo = new THREE.BoxGeometry(box.w, box.h, box.d);
+    const col = new THREE.Color(box.pkg.color);
+    const mat = new THREE.MeshLambertMaterial({
+      color: col,
+      transparent: true,
+      opacity: box.pkg.fragile ? 0.75 : 0.88
+    });
+    const mesh = new THREE.Mesh(geo, mat);
+    mesh.position.set(box.x + box.w/2, box.y + box.h/2, box.z + box.d/2);
+    mesh.castShadow = true;
+    mesh.receiveShadow = true;
+    mesh.userData = { box, idx };
+    scene.add(mesh);
+    boxMeshes.push(mesh);
+
+    // Edges — kırılgan kutular için turuncu parlak kenar
+    const edges = new THREE.EdgesGeometry(geo);
+    const edgeColor = box.pkg.fragile ? 0xff6b35 : 0x000000;
+    const edgeOpacity = box.pkg.fragile ? 0.95 : 0.35;
+    const lineMat = new THREE.LineBasicMaterial({ color: edgeColor, transparent: true, opacity: edgeOpacity });
+    const line = new THREE.LineSegments(edges, lineMat);
+    mesh.add(line);
+
+    // Kırılgan kutular için ekstra parlak iç çerçeve (biraz büyütülmüş)
+    if (box.pkg.fragile) {
+      const outerGeo = new THREE.BoxGeometry(box.w * 1.02, box.h * 1.02, box.d * 1.02);
+      const outerEdges = new THREE.EdgesGeometry(outerGeo);
+      const outerLine = new THREE.LineSegments(outerEdges,
+        new THREE.LineBasicMaterial({ color: 0xff9966, transparent: true, opacity: 0.4 })
+      );
+      mesh.add(outerLine);
+    }
+  });
+
+  raycaster = new THREE.Raycaster();
+  mouse = new THREE.Vector2();
+
+  // Events
+  canvas.onmousedown = onMouseDown;
+  canvas.onmousemove = onMouseMove;
+  canvas.onmouseup = () => { isDragging = false; isRightDrag = false; };
+  canvas.onwheel = onWheel;
+  canvas.oncontextmenu = e => e.preventDefault();
+
+  window.onresize = () => {
+    camera.aspect = container.clientWidth / container.clientHeight;
+    camera.updateProjectionMatrix();
+    renderer.setSize(container.clientWidth, container.clientHeight);
+  };
+
+  animate();
+}
+
+function rebuildScene() {
+  if (!scene) return;
+  boxMeshes.forEach(m => scene.remove(m));
+  boxMeshes = [];
+  if (warehouseMesh) scene.remove(warehouseMesh);
+}
+
+function animate() {
+  animFrameId = requestAnimationFrame(animate);
+  renderer.render(scene, camera);
+}
+
+function updateCamera() {
+  const x = spherical.radius * Math.sin(spherical.phi) * Math.sin(spherical.theta);
+  const y = spherical.radius * Math.cos(spherical.phi);
+  const z = spherical.radius * Math.sin(spherical.phi) * Math.cos(spherical.theta);
+  camera.position.set(x + panOffset.x, y + panOffset.y, z + panOffset.z);
+  camera.lookAt(panOffset.x, panOffset.y, panOffset.z);
+}
+
+function onMouseDown(e) {
+  isDragging = true;
+  isRightDrag = e.button === 2;
+  prevMouse = { x: e.clientX, y: e.clientY };
+}
+
+function onMouseMove(e) {
+  const canvas = document.getElementById('three-canvas');
+  const rect = canvas.getBoundingClientRect();
+  mouse.x = ((e.clientX - rect.left) / rect.width) * 2 - 1;
+  mouse.y = -((e.clientY - rect.top) / rect.height) * 2 + 1;
+
+  // Tooltip
+  raycaster.setFromCamera(mouse, camera);
+  const hits = raycaster.intersectObjects(boxMeshes);
+  const tooltip = document.getElementById('tooltip');
+  if (hits.length > 0) {
+    const obj = hits[0].object;
+    const b = obj.userData.box;
+    tooltip.style.display = 'block';
+    tooltip.style.left = (e.clientX - rect.left + 14) + 'px';
+    tooltip.style.top = (e.clientY - rect.top - 10) + 'px';
+    tooltip.innerHTML = `
+      <div class="tip-id">📦 ${b.pkg.id}${b.pkg.fragile ? ' <span style="color:#ff6b35;font-size:11px">🔴 KIRILGAN</span>' : ''}</div>
+      <div class="tip-dim">Boyut: ${b.pkg.w} × ${b.pkg.d} × ${b.pkg.h}</div>
+      <div class="tip-pos">Konum: (${b.x.toFixed(1)}, ${b.y.toFixed(1)}, ${b.z.toFixed(1)})</div>
+      <div class="tip-dim">Hacim: ${(b.w*b.d*b.h).toFixed(1)} u³</div>
+      ${b.pkg.fragile ? '<div style="color:#ff9966;font-size:10px;margin-top:3px">⚠️ Üstüne yükleme yapılamaz</div>' : ''}
+    `;
+    // Highlight
+    if (hoveredObj && hoveredObj !== obj) {
+      hoveredObj.material.emissive && hoveredObj.material.emissive.set(0x000000);
+    }
+    obj.material.emissive = new THREE.Color(0x333333);
+    hoveredObj = obj;
+  } else {
+    tooltip.style.display = 'none';
+    if (hoveredObj) { hoveredObj.material.emissive && hoveredObj.material.emissive.set(0x000000); hoveredObj = null; }
+  }
+
+  if (!isDragging) return;
+  const dx = e.clientX - prevMouse.x;
+  const dy = e.clientY - prevMouse.y;
+  prevMouse = { x: e.clientX, y: e.clientY };
+
+  if (isRightDrag || e.shiftKey) {
+    panOffset.x -= dx * 0.05;
+    panOffset.z -= dy * 0.05;
+  } else {
+    spherical.theta -= dx * 0.008;
+    spherical.phi = Math.max(0.1, Math.min(Math.PI/2 - 0.01, spherical.phi + dy * 0.008));
+  }
+  updateCamera();
+}
+
+function onWheel(e) {
+  spherical.radius = Math.max(3, Math.min(200, spherical.radius + e.deltaY * 0.05));
+  updateCamera();
+}
+
+// ===== VIEWS =====
+function setView(v) {
+  ['persp','top','front','side'].forEach(x => document.getElementById('v-'+x).classList.toggle('active', x===v));
+  if (!camera) return;
+  const ww = parseFloat(document.getElementById('wh-w').value)||10;
+  const wd = parseFloat(document.getElementById('wh-d').value)||10;
+  const wh = parseFloat(document.getElementById('wh-h').value)||8;
+  panOffset = {x:ww/2, y:wh/2, z:wd/2};
+  if (v==='persp') { spherical={theta:Math.PI/5,phi:Math.PI/3.5,radius:Math.max(ww,wd,wh)*2.5}; }
+  else if (v==='top') { spherical={theta:0,phi:0.01,radius:Math.max(ww,wd)*2}; }
+  else if (v==='front') { spherical={theta:0,phi:Math.PI/2-0.01,radius:Math.max(ww,wh)*2}; }
+  else if (v==='side') { spherical={theta:Math.PI/2,phi:Math.PI/2-0.01,radius:Math.max(wd,wh)*2}; }
+  updateCamera();
+}
+
+function toggleWireframe() {
+  wireframe = !wireframe;
+  document.getElementById('v-wireframe').classList.toggle('active', wireframe);
+  boxMeshes.forEach(m => { m.material.wireframe = wireframe; });
+}
+
+// Init
+renderPkgList();
+</script>
+</body>
+</html>
